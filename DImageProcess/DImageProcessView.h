@@ -46,6 +46,7 @@ protected:
 public:
 	afx_msg void OnZoom();
 	afx_msg void OnTranslation();
+	afx_msg void OnRotation();
 };
 
 #ifndef _DEBUG  // DImageProcessView.cpp 中的调试版本

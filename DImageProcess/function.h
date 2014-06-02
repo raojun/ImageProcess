@@ -226,3 +226,88 @@ BOOL Translation(LPSTR lpSrcStartBits, long lWidth, long lHeight,
 	LocalFree(hDstDIBBits);
 	return TRUE;
 }
+
+/*************************************************************************
+* 函数名称：Rotate(LPSTR lpSrcDib, LPSTR lpSrcStartBits,long lWidth, long lHeight,
+long lLineBytes,	WORD palSize, long lDstWidth,
+long lDstHeight,long lDstLineBytes,float	fSina, float fCosa)
+* 函数参数:
+*   LPSTR lpSrcDib,指向源DIB的指针
+*   LPSTR lpSrcStartBits,指向源DIB的起始像素的指针
+*   long lWidth,源DIB图像宽度
+*   long lHeight,源DIB图像高度
+*	 long lLineBytes,源DIB图像字节宽度（4的倍数）
+*	 WORD palSize,源DIB图像调色板大小
+*	 long lDstWidth,目标图像宽度
+*	 long lDstHeight,目标DIB图像高度
+*	 long lDstLineBytes,目标DIB图像行字节数（4的倍数）
+*	 float	fSina,旋转角的余弦，说明：为了避免两次求取正余弦，这里作为两个函数参数来用
+*	 float fCosa,旋转角的正弦
+* 函数类型:HGLOBAL
+* 函数功能:用来旋转DIB图像
+************************************************************************/
+
+HGLOBAL Rotate(LPSTR lpSrcDib, LPSTR lpSrcStartBits, long lWidth, long lHeight,
+	long lLineBytes, WORD palSize, long lDstWidth, long lDstHeight,
+	long lDstLineBytes, float fSina, float fCosa)
+{
+	float varFloat1;//浮点参数变量1
+	float varFloat2;//浮点参数变量2
+	LPSTR lpDstDib;//指向临时图像的指针
+	long i;//行循环变量
+	long i1;//行循环变量
+	long j;//列循环变量
+	long j1;//列循环变量
+	LPSTR lpSrcDIBBits;//指向源像素的指针
+	LPSTR lpDstDIBBits;//指向临时图像对应像素的指针
+	LPSTR lpDstStartBits;//指向临时图像对应像素的指针
+	LPBITMAPINFOHEADER lpbmi;//指向BITMAPINFOHEADER结构的指针
+
+	//将经常用到的两个常数求出，以便作为常数使用
+	varFloat1 = (float)(-0.5*(lDstWidth - 1)*fCosa - 0.5*(lDstHeight - 1)*fSina
+		+ 0.5*(lDstWidth - 1));
+	varFloat2 = (float)(0.5*(lDstWidth - 1)*fSina - 0.5*(lDstHeight - 1)*fCosa
+		+ 0.5*(lDstHeight - 1));
+
+	//分配内存，以保存新DIB
+	HGLOBAL hDIB = (HGLOBAL)::GlobalAlloc(GHND, lDstLineBytes*lDstHeight + *(LPDWORD)lpSrcDib + palSize);
+
+	if (hDIB == NULL)//判断是否是有效的DIB对象
+	{
+		return FALSE;
+	}
+
+	lpDstDib = (char*)::GlobalLock((HGLOBAL)hDIB);//锁定内存
+	memcpy(lpDstDib, lpSrcDib, *(LPDWORD)lpSrcDib + palSize);
+	//复制DIB信息头和调色板
+	lpbmi = (LPBITMAPINFOHEADER)lpDstDib;//获取指针
+	lpbmi->biHeight = lDstHeight;//更新DIB中图像的高度和宽度
+	lpbmi->biWidth = lDstWidth;
+
+	lpDstStartBits = lpDstDib + *(LPDWORD)lpDstDib + palSize;
+	for (i = 0; i < lDstHeight; i++)//行操作
+	{
+		for (j = 0; j < lDstWidth; j++)//列操作
+		{
+			//指向新DIB第i行、第j个像素的指针
+			lpDstDIBBits = (char*)lpDstStartBits + lDstLineBytes*(lDstHeight - 1 - i) + j;
+			
+			//计算该像素在源DIB中的坐标
+			i1 = (long)(-((float)j)*fSina + ((float)i)*fCosa + varFloat2 + 0.5);
+			j1 = (long)(((float)j)*fCosa + ((float)i)*fSina + varFloat1 + 0.5);
+
+			//判断是否在源图内
+			if ((j1>=0)&&(j1<lWidth)&&(i1>=0)&&(i1<lHeight))
+			{
+				//指向源DIB第i1行、第j1个像素的指针
+				lpSrcDIBBits = (char*)lpSrcStartBits + lLineBytes*(lHeight - 1 - i1) + j1;
+				*lpDstDIBBits = *lpSrcDIBBits;//复制像素
+			}
+			else
+			{
+				*((unsigned char*)lpDstDIBBits) == 255;//源图中不存在的像素，赋值为255
+			}
+		}
+	}
+	return hDIB;
+}

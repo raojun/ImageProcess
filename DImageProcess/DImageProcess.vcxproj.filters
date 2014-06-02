@@ -54,6 +54,9 @@
     <ClInclude Include="DlgTran.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="DlgRot.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DImageProcess.cpp">
@@ -81,6 +84,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="DlgTran.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgRot.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

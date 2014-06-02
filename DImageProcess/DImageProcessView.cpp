@@ -15,6 +15,7 @@
 #include "function.h"
 #include "DlgZoom.h"
 #include "DlgTran.h"
+#include "DlgRot.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -32,6 +33,7 @@ BEGIN_MESSAGE_MAP(CDImageProcessView, CView)
 	ON_COMMAND(ID_FILE_PRINT_PREVIEW, &CView::OnFilePrintPreview)
 	ON_COMMAND(ID_geo_zoom, &CDImageProcessView::OnZoom)
 	ON_COMMAND(ID_geo_translation, &CDImageProcessView::OnTranslation)
+	ON_COMMAND(ID_geo_rotation, &CDImageProcessView::OnRotation)
 END_MESSAGE_MAP()
 
 // CDImageProcessView 构造/析构
@@ -237,4 +239,99 @@ void CDImageProcessView::OnTranslation()
 	{
 		AfxMessageBox(_T("分配内存失败！"));
 	}//警告	
+}
+
+
+void CDImageProcessView::OnRotation()
+{
+	// TODO:  在此添加命令处理程序代码
+	CDImageProcessDoc* pDoc = GetDocument();
+	
+	long lSrcLineBytes;//图像每行的字节数
+	long lSrcWidth;//图像的宽度
+	long lSrcHeight;//图像的高度
+	LPSTR lpSrcDib;//指向源图像的指针
+	LPSTR lpSrcStartBits;//指向源像素的指针
+	long lDstWidth;//临时图像的宽度和高度
+	long lDstHeight;
+
+	lpSrcDib = (LPSTR)::GlobalLock((HGLOBAL)pDoc->GetHObject());//锁定内存
+
+	if (pDoc->m_dib.GetColorNum(lpSrcDib) != 256)//判断是否是8-bpp位图，不是则返回
+	{
+		AfxMessageBox(_T("对不起，不是256色位图！"));
+		::GlobalUnlock((HGLOBAL)pDoc->GetHObject());//解除锁定
+		return;
+	}
+
+	lpSrcStartBits = pDoc->m_dib.GetBits(lpSrcDib);//找到DIB图像像素起始位置
+	lSrcWidth = pDoc->m_dib.GetWidth(lpSrcDib);//获取图像的宽度
+	lSrcHeight = pDoc->m_dib.GetHeight(lpSrcDib);//获取图像的高度
+	lSrcLineBytes = pDoc->m_dib.GetReqByteWidth(lSrcWidth * 8);//计算图像每行的字节数
+	
+	long lDstLineBytes; //新图像每行的字节数
+
+	CDlgRot RotPara;//创建对话框
+	if (RotPara.DoModal() != IDOK)//显示对话框，设定旋转角度
+	{
+		return;
+	}
+
+	DWORD palSize = pDoc->m_dib.GetPalSize(lpSrcDib);
+	//将旋转角度从度转换为弧度
+	float fRotateAngle = (float)AngleToRation(RotPara.m_rotAngle);
+	float fSina = (float)sin((double)fRotateAngle);//计算旋转角度的正余弦
+	float fCosa = (float)cos((double)fRotateAngle);
+
+	//旋转前4个角的坐标，（以图像中心为坐标系原点）
+	float fSrcX1, fSrcY1, fSrcX2, fSrcY2, fSrcX3, fSrcY3, fSrcX4, fSrcY4;
+	//旋转后4个角的坐标
+	float fDstX1, fDstY1, fDstX2, fDstY2, fDstX3, fDstY3, fDstX4, fDstY4;
+
+	//计算源图的4个角的坐标
+	fSrcX1 = (float)(-(lSrcWidth - 1) / 2);
+	fSrcY1 = (float)((lSrcHeight - 1) / 2);
+	fSrcX2 = (float)((lSrcWidth - 1) / 2);
+	fSrcY2 = (float)((lSrcHeight - 1) / 2);
+	fSrcX3 = (float)(-(lSrcWidth - 1) / 2);
+	fSrcY3 = (float)(-(lSrcHeight - 1) / 2);
+	fSrcX4 = (float)((lSrcWidth - 1) / 2);
+	fSrcY4 = (float)(-(lSrcHeight - 1) / 2);
+
+	//计算新图的4个角的坐标
+	fDstX1 = fCosa * fSrcX1 + fSina * fSrcY1;
+	fDstY1 = -fSina * fSrcX1 + fCosa * fSrcY1;
+	fDstX2 = fCosa * fSrcX2 + fSina * fSrcY2;
+	fDstY2 = -fSina * fSrcX2 + fCosa * fSrcY2;
+	fDstX3 = fCosa * fSrcX3 + fSina * fSrcY3;
+	fDstY3 = -fSina * fSrcX3 + fCosa * fSrcY3;
+	fDstX4 = fCosa * fSrcX4 + fSina * fSrcY4;
+	fDstY4 = -fSina * fSrcX4 + fCosa * fSrcY4;
+
+	//计算旋转后的图像实际宽度和高度
+	lDstWidth = (long)(max(fabs(fDstX4 - fDstX1), fabs(fDstX3 - fDstX2)) + 0.5);
+	lDstHeight = (long)(max(fabs(fDstY4 - fDstY1), fabs(fDstY3 - fDstY2)) + 0.5);
+
+	//计算新图像每行的字节数
+	lDstLineBytes = pDoc->m_dib.GetReqByteWidth(lDstWidth * 8);
+
+	HGLOBAL hDstDIB = NULL;//创建新DIB
+
+	//调用Rotate()函数旋转DIB
+	hDstDIB = (HGLOBAL)Rotate(lpSrcDib, lpSrcStartBits, lSrcWidth, lSrcHeight, lSrcLineBytes,
+		palSize, lDstWidth, lDstHeight, lDstLineBytes, fSina, fCosa);
+
+	//判断是否旋转成功
+	if (hDstDIB != NULL)
+	{
+		pDoc->UpdateObject(hDstDIB);//替换DIB，同时释放旧DIB对象
+		pDoc->SetDib();//更新DIB大小和调色板
+		pDoc->SetModifiedFlag(TRUE);//设置修改标记
+		pDoc->UpdateAllViews(NULL);//更新视图
+		::GlobalUnlock((HGLOBAL)pDoc->GetHObject());//解除锁定
+	}
+	else
+	{
+		AfxMessageBox(_T("分配内存失败！"));
+	}
 }
