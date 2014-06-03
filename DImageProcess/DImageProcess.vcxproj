@@ -107,6 +107,7 @@
     <ClInclude Include="DImageProcessDoc.h" />
     <ClInclude Include="DImageProcessView.h" />
     <ClInclude Include="DlgRot.h" />
+    <ClInclude Include="Dlgsvd.h" />
     <ClInclude Include="DlgTran.h" />
     <ClInclude Include="DlgZoom.h" />
     <ClInclude Include="function.h" />
@@ -122,6 +123,7 @@
     <ClCompile Include="DImageProcessDoc.cpp" />
     <ClCompile Include="DImageProcessView.cpp" />
     <ClCompile Include="DlgRot.cpp" />
+    <ClCompile Include="Dlgsvd.cpp" />
     <ClCompile Include="DlgTran.cpp" />
     <ClCompile Include="DlgZoom.cpp" />
     <ClCompile Include="MainFrm.cpp" />

@@ -311,3 +311,123 @@ HGLOBAL Rotate(LPSTR lpSrcDib, LPSTR lpSrcStartBits, long lWidth, long lHeight,
 	}
 	return hDIB;
 }
+
+
+//函数功能：将n阶实对称矩阵化为对称三角阵
+BOOL ThreeCrossMat(double *pMatrix, int rank, double *pQMatrix, double *pMainCross, double *pHypoCross)
+{
+	int i, j, k, u;
+	double h, f, g, h2;
+
+	for (i = 0; i <= rank - 1; i++)
+	{
+		for (j = 0; j <= rank - 1; j++)
+		{
+			u = i*rank + j;
+			pQMatrix[u] = pMatrix[u];
+		}
+	}
+
+	for (i = rank - 1; i >= 1; i--)
+	{
+		h = 0.0;
+		if (i > 1)
+		{
+			for (k = 0; k <= i - 1; k++)
+			{
+				u = i*rank + k;
+				h = h + pQMatrix[u] * pQMatrix[u];
+			}
+		}
+		if (h + 1.0 == 1.0)//如果一行全为0
+		{
+			pHypoCross[i] = 0.0;
+			if (i == 1)
+			{
+				pHypoCross[i] = pQMatrix[i*rank + i - 1];
+			}
+			pMainCross[i] = 0.0;
+		}
+		else//否则求正交矩阵的值
+		{
+			pHypoCross[i] = sqrt(h);//求次对角元素的值
+			u = i*rank + i - 1;
+			if (pQMatrix[u] > 0.0)//判断第i行、第i-1列元素是否大于0
+			{
+				pHypoCross[i] = -pHypoCross[i];
+			}
+			h = h - pQMatrix[u] * pHypoCross[i];
+			pQMatrix[u] = pQMatrix[u] - pHypoCross[i];
+			f = 0.0;
+			for (j = 0; j <= i - 1; j++)//householder变换
+			{
+				pQMatrix[j*rank + i] = pQMatrix[i*rank + j] / h;
+				g = 0.0;
+				for (k = 0; k <= j; k++)
+				{
+					g = g + pQMatrix[j*rank + k] * pQMatrix[i*rank + k];
+				}
+				if (j + 1 <= i - 1)
+				{
+					for (k = j + 1; k <= i - 1; k++)
+					{
+						g = g + pQMatrix[k*rank + j] * pQMatrix[i*rank + k];
+					}
+					pHypoCross[j] = g / h;
+					f = f + g*pQMatrix[j*rank + i];
+				}
+				h2 = f / (h + h);
+				for (j = 0; j <= i - 1; j++)//求正交矩阵的值
+				{
+					f = pQMatrix[i*rank + j];
+					g = pHypoCross[j] - h2*f;
+					pHypoCross[j] = g;
+					for (k = 0; k <= j; k++)
+					{
+						u = j*rank + k;
+						pQMatrix[u] = pQMatrix[u] - f*pQMatrix[i*rank + k];
+					}
+				}
+				pMainCross[i] = h;
+			}
+		}
+		for (i = 0; i <= rank - 2; i++)//赋0值
+		{
+			pHypoCross[i] = pHypoCross[i + 1];
+		}
+		pHypoCross[rank - 1] = 0.0;
+		pMainCross[0] = 0.0;
+		for (i = 0; i <= rank - 1; i++)
+		{
+			if ((pMainCross[i] != 0.0) && (i - 1 >= 0))//主对角线元素的计算
+			{
+				for (j = 0; j <= i - 1; j++)
+				{
+					g = 0.0;
+					for (k = 0; k <= i - 1; k++)
+					{
+						g = g + pQMatrix[i*rank + k] * pQMatrix[k*rank + j];
+					}
+					for (k = 0; k <= i - 1; k++)
+					{
+						u = k*rank + j;
+						pQMatrix[u] = pQMatrix[u] - g*pQMatrix[k*rank + i];
+					}
+				}
+			}
+			u = i*rank + i;//存储主对角线的元素
+			pMainCross[i] = pQMatrix[u];
+			pQMatrix[u] = 1.0;
+			if (i - 1 >= 0)//将三对角外所有的元素赋0值
+			{
+				for (j = 0; j <= i - 1; j++)
+				{
+					pQMatrix[i*rank + j] = 0.0;
+					pQMatrix[j*rank + i] = 0.0;
+				}
+			}
+		}
+	}
+	return(TRUE);
+}
+

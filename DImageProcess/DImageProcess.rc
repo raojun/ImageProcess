@@ -156,6 +156,10 @@ BEGIN
         MENUITEM "图像平移",                        ID_geo_translation
         MENUITEM "图像旋转",                        ID_geo_rotation
     END
+    POPUP "正交变换"
+    BEGIN
+        MENUITEM "SVD变换",                       ID_SVD
+    END
 END
 
 
@@ -241,6 +245,20 @@ BEGIN
     LTEXT           "角度：",IDC_STATIC,30,45,25,8
 END
 
+IDD_dlg_svd DIALOGEX 0, 0, 187, 120
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Dialog"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "确定",IDOK,23,99,50,14
+    PUSHBUTTON      "取消",IDCANCEL,114,99,50,14
+    GROUPBOX        "",IDC_STATIC,7,7,173,88
+    LTEXT           "压缩比率",IDC_STATIC,19,17,33,8
+    CONTROL         "",IDC_SPIN_svd,"msctls_updown32",UDS_SETBUDDYINT | UDS_AUTOBUDDY | UDS_ARROWKEYS,33,40,10,14
+    EDITTEXT        IDC_rot_svd,45,40,85,14,ES_AUTOHSCROLL
+    LTEXT           "%",IDC_STATIC,134,43,8,8
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -319,6 +337,14 @@ BEGIN
         RIGHTMARGIN, 182
         TOPMARGIN, 7
         BOTTOMMARGIN, 98
+    END
+
+    IDD_dlg_svd, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 113
     END
 END
 #endif    // APSTUDIO_INVOKED
